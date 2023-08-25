@@ -43,15 +43,14 @@ options:
   --only-no-readonly    Only check permissions with OpenAI
 
 # Run the 3 modes with 3 profiles
-aws_sensitive_permissions.py profile-name profile-name2 profile-name3 -k <openai_api_key> -v
+python3 aws_sensitive_permissions.py profile-name profile-name2 profile-name3 -k <openai_api_key> -v
 
 # Run only the yaml mode with 1 profile
-aws_sensitive_permissions.py profile-name --only-yaml -v
+python3 aws_sensitive_permissions.py profile-name --only-yaml -v
 
 # Run only the openai mode with 1 profile
-aws_sensitive_permissions.py profile-name --only-openai -k <openai_api_key> -v
+python3 aws_sensitive_permissions.py profile-name --only-openai -k <openai_api_key> -v
 
 # Run only the no-readonly mode with 1 profile
-aws_sensitive_permissions.py profile-name --only-no-readonly -v
-```
+python3 aws_sensitive_permissions.py profile-name --only-no-readonly -v
 ```

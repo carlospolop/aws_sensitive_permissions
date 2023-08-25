@@ -147,7 +147,12 @@ def get_readonly_perms(profile):
 def combine_permissions(policy_documents):
     permissions = []
     for document in policy_documents:
-        for statement in document["Statement"]:
+        if type(document["Statement"]) == list:
+            statements = document["Statement"]
+        else:
+            statements = []
+            statements.append(document["Statement"])
+        for statement in statements:
             actions = statement.get("Action", [])
             if isinstance(actions, str):
                 actions = [actions]
