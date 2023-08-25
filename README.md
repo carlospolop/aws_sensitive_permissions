@@ -10,7 +10,7 @@ Moreover, this tool offer **3 ways to find sensitive permissions**:
 - Using **OpenAI to ask** if a set of permissions contains sensitive or a privesc permissions.
 - Checking for **permissions not included in the ReadOnly** managed policy.
 
-If you only want the output of 1 or 2 of the methods, you can use the `--only-yaml`, `--only-openai` or `--only-no-readonly``flags together.
+If you only want the output of 1 or 2 of the methods, you can use the `--only-yaml`, `--only-openai` or `--only-no-readonly` flags together.
 
 If you know more interesting AWS permissions feel free to send a **PR here and to [HackTricks Cloud](https://github.com/carlospolop/hacktricks-cloud)**
 
