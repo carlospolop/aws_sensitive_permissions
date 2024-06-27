@@ -310,9 +310,9 @@ def combine_permissions(policy_documents, all_resources, all_actions):
         for statement in statements:
             resource = statement.get("Resource", [])
             if not all_resources:
-                if type(resource) == str and resource != "*":
+                if type(resource) == str and resource != "*" and not resource.endswith(":*"):
                     continue
-                elif "*" not in resource:
+                elif "*" not in resource and not any(r.endswith(":*") for r in resource):
                     continue
             
             actions = statement.get("Action", [])
