@@ -21,6 +21,8 @@ Moreover, this tool offer **2 ways to find dangerous permissions**:
 - Using a **YAML file with sensitive and privescs permissions predefined** (based on https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation and https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation).
 - Using **OpenAI to ask** if a set of permissions contains sensitive or a privesc permissions. **You need to provide your own OpenAI api key**.
 
+Note that this **tool only sends permissions names to OpenAI, no private information is shared**.
+
 If you know more interesting AWS permissions feel free to send a **PR here and to [HackTricks Cloud](https://github.com/carlospolop/hacktricks-cloud)**
 
 ## Parameters
