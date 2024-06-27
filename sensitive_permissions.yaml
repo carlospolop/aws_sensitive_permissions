@@ -2,10 +2,18 @@
 apigateway:
   urls:
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-apigateway-privesc
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-api-gateway-post-exploitation
   
   sensitive:
     - apigateway:POST
     - apigateway:GET
+    - apigateway:UpdateGatewayResponse, apigateway:CreateDeployment
+    - apigateway:UpdateStage, apigateway:CreateDeployment
+    - apigateway:PutMethodResponse, apigateway:CreateDeployment
+    - apigateway:UpdateRestApi, apigateway:CreateDeployment
+    - apigateway:CreateApiKey, apigateway:UpdateApiKey, apigateway:CreateUsagePlan, apigateway:CreateUsagePlanKey
+    - apigateway:UpdateRestApiPolicy, apigateway:PATCH
+
 
 chime:
   urls:
@@ -17,10 +25,16 @@ chime:
 codebuild:
   urls:
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-codebuild-privesc
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-codebuild-post-exploitation
 
   privesc:
     - iam:PassRole, codebuild:CreateProject
     - iam:PassRole, codebuild:UpdateProject
+    - codebuild:UpdateProject
+  
+  sensitive:
+    - codebuild:DeleteProject
+    - codebuild:DeleteSourceCredentials
 
 codepipeline:
   urls:
@@ -101,11 +115,12 @@ ds:
   urls:
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-directory-services-privesc
   
-  privesc:
+  sensitive:
     - ds:ResetUserPassword
 
 dynamodb:
   urls:
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-dynamodb-post-exploitation
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-dynamodb-privesc
   
   sensitive:
@@ -115,6 +130,12 @@ dynamodb:
     - dynamodb:Scan
     - dynamodb:PartiQLSelect
     - dynamodb:ExportTableToPointInTime
+    - dynamodb:CreateTable, dynamodb:RestoreTableFromBackup
+    - dynamodb:PutItem
+    - dynamodb:UpdateItem
+    - dynamodb:DeleteTable
+    - dynamodb:DeleteBackup
+
 
 ebs:
   urls:
@@ -137,6 +158,10 @@ ec2:
     - autoscaling:CreateLaunchConfiguration, autoscaling:CreateAutoScalingGroup, iam:PassRole
     - ec2-instance-connect:SendSSHPublicKey
     - ec2-instance-connect:SendSerialConsoleSSHPublicKey
+  
+  sensitive:
+    - EC2:DescribeVolumes, DLM:CreateLifeCyclePolicy
+    - ec2:DescribeInstances, ec2:RunInstances, ec2:CreateSecurityGroup, ec2:AuthorizeSecurityGroupIngress, ec2:CreateTrafficMirrorTarget, ec2:CreateTrafficMirrorSession, ec2:CreateTrafficMirrorFilter, ec2:CreateTrafficMirrorFilterRule
 
 ecr:
   urls:
@@ -147,6 +172,11 @@ ecr:
     - ecr:GetAuthorizationToken, ecr:BatchCheckLayerAvailability, ecr:CompleteLayerUpload, ecr:InitiateLayerUpload, ecr:PutImage, ecr:UploadLayerPart
     - ecr:SetRepositoryPolicy
     - ecr:PutRegistryPolicy
+    - ecr:PutLifecyclePolicy
+    - ecr:DeleteRepository
+    - ecr-public:DeleteRepository
+    - ecr:BatchDeleteImage
+    - ecr-public:BatchDeleteImage
 
 ecs:
   urls:
@@ -169,6 +199,7 @@ ecs:
 efs:
   urls:
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-efs-privesc
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-efs-post-exploitation
   
   sensitive:
     - elasticfilesystem:DeleteFileSystemPolicy
@@ -176,14 +207,24 @@ efs:
     - elasticfilesystem:ClientMount
     - elasticfilesystem:CreateMountTarget
     - elasticfilesystem:ModifyMountTargetSecurityGroups
+    - elasticfilesystem:DeleteMountTarget
+    - elasticfilesystem:DeleteFileSystem
+    - elasticfilesystem:UpdateFileSystem
+    - elasticfilesystem:CreateAccessPoint, elasticfilesystem:DeleteAccessPoint
 
 elasticbeanstalk:
   urls:
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-elastic-beanstalk-privesc
   
   privesc:
-    - elasticbeanstalk:CreateApplication,  elasticbeanstalk:CreateEnvironment, elasticbeanstalk:CreateApplicationVersion, elasticbeanstalk:UpdateEnvironment, iam:PassRole
+    - elasticbeanstalk:CreateApplication, elasticbeanstalk:CreateEnvironment, elasticbeanstalk:CreateApplicationVersion, elasticbeanstalk:UpdateEnvironment, iam:PassRole
     - elasticbeanstalk:CreateApplicationVersion, elasticbeanstalk:UpdateEnvironment, cloudformation:GetTemplate, cloudformation:DescribeStackResources, cloudformation:DescribeStackResource, autoscaling:DescribeAutoScalingGroups, autoscaling:SuspendProcesses, autoscaling:SuspendProcesses
+
+  sensitive:
+    - elasticbeanstalk:DeleteApplicationVersion
+    - elasticbeanstalk:TerminateEnvironment
+    - elasticbeanstalk:DeleteApplication
+
 
 emr:
   urls:
@@ -244,7 +285,7 @@ kms:
   urls:
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-kms-privesc
   
-  privesc:
+  sensitive:
     - kms:PutKeyPolicy
     - kms:CreateGrant
     - kms:CreateKey, kms:ReplicateKey
@@ -310,12 +351,16 @@ msk:
 
 rds:
   urls:
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-rds-post-exploitation
     - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-rds-privesc
   
   sensitive:
     - rds:ModifyDBInstance
     - rds:CreateDBSnapshot, rds:RestoreDBInstanceFromDBSnapshot, rds:ModifyDBInstance
     - rds-db:connect
+    - rds:DownloadDBLogFilePortion
+    - rds:DeleteDBInstance
+    - rds:StartExportTask
 
 redshift:
   urls:
@@ -325,6 +370,42 @@ redshift:
     - redshift:DescribeClusters, redshift:GetClusterCredentials
     - redshift:DescribeClusters, redshift:GetClusterCredentialsWithIAM
     - redshift:DescribeClusters, redshift:ModifyCluster
+
+route53:
+  urls:
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/route53-createhostedzone-route53-changeresourcerecordsets-acm-pca-issuecertificate-acm-pca-getcer
+  sensitive:
+    - route53:CreateHostedZone, route53:ChangeResourceRecordSets, acm-pca:IssueCertificate, acm-pca:GetCertificate
+
+sns:
+  urls:
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-sns-post-exploitation
+  
+  sensitive:
+    - sns:DeleteTopic
+    - sns:Publish
+    - sns:SetTopicAttributes
+    - sns:Subscribe
+    - sns:Unsubscribe
+    - sns:AddPermission
+    - sns:RemovePermission
+
+sqs:
+  urls: 
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-post-exploitation/aws-sqs-post-exploitation
+    - https://cloud.hacktricks.xyz/pentesting-cloud/aws-security/aws-privilege-escalation/aws-sqs-privesc
+  
+  sensitive:
+    - sqs:AddPermission
+    - sqs:SendMessage
+    - sqs:SendMessageBatch
+    - sqs:ReceiveMessage
+    - sqs:DeleteMessage
+    - sqs:ChangeMessageVisibility
+    - sqs:DeleteQueue
+    - sqs:PurgeQueue
+    - sqs:RemovePermission
+
 
 sso:
   urls:
