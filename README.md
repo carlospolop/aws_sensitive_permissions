@@ -42,6 +42,44 @@ If they aren't created, you will need the permissions:
 - `access-analyzer:List*`
 - `access-analyzer:Get*`
 - `access-analyzer:DeleteAnalyzer`
+- `iam:CreateServiceLinkedRole`
+
+<details>
+<summary>Expand JSON example</summary>
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "access-analyzer:List*",
+                "access-analyzer:Get*",
+                "access-analyzer:DeleteAnalyzer",
+                "access-analyzer:CreateAnalyzer"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": "AccessAnalyzerOperator"
+        },
+        {
+            "Action": [
+                "iam:CreateServiceLinkedRole"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "iam:AWSServiceName": "access-analyzer.amazonaws.com"
+                }
+            },
+            "Sid": "AccessAnalyzerOperatorCreateServiceLinkedRole"
+        }
+    ]
+}
+```
+</details>
+
 
 So the script can create it, query it and finally delete it.
 
