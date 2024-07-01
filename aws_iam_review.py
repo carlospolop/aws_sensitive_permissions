@@ -10,6 +10,8 @@ from termcolor import colored
 from datetime import datetime, timezone
 import pytz
 from tqdm import tqdm
+import threading
+import concurrent.futures
 
 
 #########################
@@ -83,6 +85,7 @@ If there aren't privilege escalation or sensitive permissions return an empty ar
 """
 
 
+MAX_PERMS_TO_PRINT = 15
 
 OPENAI_CLIENT = None
 READONLY_PERMS = []
@@ -93,6 +96,7 @@ UNUSED_ACC_KEYS = {}
 UNUSED_PERMS = {}
 UNUSED_GROUPS = {}
 EXTERNAL_PPALS = {}
+SEMAPHORE_THREAD = threading.Semaphore()
 IS_ADMINISTRATOR_REASON = "Is administrator"
 
 
@@ -104,24 +108,28 @@ def print_permissions(ppal_permissions, print_reasons, merge_perms):
         ppal_permissions['known_sensitive_perms_reasons'] = ppal_permissions['known_sensitive_perms_reasons'] + ". " + ppal_permissions['ai_sensitive_perms_reasons']
 
     if ppal_permissions["known_privesc_perms"]:
-        print(f"    - {colored('Privilege escalation', 'green')}: {', '.join(f"`{p}`" for p in ppal_permissions['known_privesc_perms'])}")
+        more_than_str = " and more..." if len(ppal_permissions["known_privesc_perms"]) > MAX_PERMS_TO_PRINT else ""
+        print(f"    - {colored('Privilege escalation', 'green')}: {', '.join(f"`{p}`" for p in ppal_permissions['known_privesc_perms'][:MAX_PERMS_TO_PRINT])}{more_than_str}")
         if print_reasons:
             print(f"    - Reasons: {ppal_permissions['known_privesc_perms_reasons']}")
     
     if ppal_permissions["known_sensitive_perms"]:
-        print(f"    - {colored('Sensitive', 'blue')}: {', '.join(f"`{p}`" for p in ppal_permissions['known_sensitive_perms'])}")
+        more_than_str = " and more..." if len(ppal_permissions["known_sensitive_perms"]) > MAX_PERMS_TO_PRINT else ""
+        print(f"    - {colored('Sensitive', 'blue')}: {', '.join(f"`{p}`" for p in ppal_permissions['known_sensitive_perms'][:MAX_PERMS_TO_PRINT])}{more_than_str}")
         if print_reasons:
             print(f"    - Reasons: {ppal_permissions['known_sensitive_perms_reasons']}")
     
     unknown_ai_permissions = [p for p in ppal_permissions["ai_privesc_perms"] if p not in ppal_permissions["known_privesc_perms"]]
     if unknown_ai_permissions:
-        print(f"    - {colored('AI Privilege escalation', 'green')}: {', '.join(f"`{p}`" for p in unknown_ai_permissions)}")
+        more_than_str = " and more..." if len(ppal_permissions["ai_privesc_perms"]) > MAX_PERMS_TO_PRINT else ""
+        print(f"    - {colored('AI Privilege escalation', 'green')}: {', '.join(f"`{p}`" for p in unknown_ai_permissions[:MAX_PERMS_TO_PRINT])}{more_than_str}")
         if print_reasons:
             print(f"    - Reasons: {ppal_permissions['ai_privesc_perms_reasons']}")
     
     unknown_ai_permissions = [p for p in ppal_permissions["ai_sensitive_perms"] if p not in ppal_permissions["known_sensitive_perms"]]
     if unknown_ai_permissions:
-        print(f"    - {colored('AI Sensitive', 'blue')}: {', '.join(f"`{p}`" for p in unknown_ai_permissions)}")
+        more_than_str = " and more..." if len(ppal_permissions["ai_sensitive_perms"]) > MAX_PERMS_TO_PRINT else ""
+        print(f"    - {colored('AI Sensitive', 'blue')}: {', '.join(f"`{p}`" for p in unknown_ai_permissions[:MAX_PERMS_TO_PRINT])}{more_than_str}")
         if print_reasons:
             print(f"    - Reasons: {ppal_permissions['ai_sensitive_perms_reasons']}")
 
@@ -135,61 +143,78 @@ def print_results(account_id, profile, print_reasons, merge_perms):
         print(f"{colored('Unused roles with sensitive permissions', 'yellow')}:")
         for arn, data in UNUSED_ROLES.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
+            no_sensitive_perms = not data.get("permissions")
             
             if data['n_days'] == -1:
-                print(f"  - `{arn}`: Never used{is_external_str}")
+                intro_str = f"  - `{arn}`: Never used{is_external_str}"
             else:
-                print(f"  - `{arn}`: Last used {data['n_days']} days ago{is_external_str}")
+                intro_str = f"  - `{arn}`: Last used {data['n_days']} days ago{is_external_str}"
             
+            if no_sensitive_perms:
+                intro_str += " (No sensitive permissions granted)"
+            
+            print(intro_str)
+
             if data.get("permissions"):
                 print_permissions(data["permissions"], print_reasons, merge_perms)
-            else:
-                print("    - No sensitive permissions found.")
+            
             print()
 
     if UNUSED_LOGINS:
         print(f"{colored('Unused user logins with sensitive permissions', 'yellow')}:")
         for arn, data in UNUSED_LOGINS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
-
+            no_sensitive_perms = not data.get("permissions")
+            
             if data['n_days'] == -1:
-                print(f"  - `{arn}`: Never used{is_external_str}")
+                intro_str = f"  - `{arn}`: Never used{is_external_str}"
             else:
-                print(f"  - `{arn}`: Last used {data['n_days']} days ago{is_external_str}")
+                intro_str = f"  - `{arn}`: Last used {data['n_days']} days ago{is_external_str}"
+            
+            if no_sensitive_perms:
+                intro_str += " (No sensitive permissions granted)"
+            
+            print(intro_str)
             
             if data.get("permissions"):
                 print_permissions(data["permissions"], print_reasons, merge_perms)
-            else:
-                print("    - No sensitive permissions found.")
+            
             print()
 
     if UNUSED_ACC_KEYS:
         print(f"{colored('Unused access keys with sensitive permissions', 'yellow')}:")
         for arn, data in UNUSED_ACC_KEYS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
-
+            no_sensitive_perms = not data.get("permissions")
+            
             if data['n_days'] == -1:
-                print(f"  - `{arn}`: Never used{is_external_str}")
+                intro_str = f"  - `{arn}`: Never used{is_external_str}"
             else:
-                print(f"  - `{arn}`: Last used {data['n_days']} days ago{is_external_str}")
+                intro_str = f"  - `{arn}`: Last used {data['n_days']} days ago{is_external_str}"
+            
+            if no_sensitive_perms:
+                intro_str += " (No sensitive permissions granted)"
+            
+            print(intro_str)
             
             if data.get("permissions"):
                 print_permissions(data["permissions"], print_reasons, merge_perms)
-            else:
-                print("    - No sensitive permissions found.")
+                
             print()
     
     if UNUSED_GROUPS:
         print(f"{colored('Unused groups with sensitive permissions', 'yellow')}:")
         for arn, data in UNUSED_GROUPS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
+            no_sensitive_perms = not data.get("permissions")
 
-            print(f"  - `{arn}`: Is empty{is_external_str}")
+            if no_sensitive_perms:
+                print(f"  - `{arn}`: Is empty{is_external_str} (No sensitive permissions granted)")
+            else:
+                print(f"  - `{arn}`: Never used{is_external_str}")
             
             if data.get("permissions"):
                 print_permissions(data["permissions"], print_reasons, merge_perms)
-            else:
-                print("    - No sensitive permissions found.")
 
             print()
 
@@ -198,12 +223,16 @@ def print_results(account_id, profile, print_reasons, merge_perms):
         for arn, data in UNUSED_PERMS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
 
-            print(f"  - `{arn}`: {data['n_days']} days ago{is_external_str}")
+            if data['n_days'] == -1:
+                print(f"  - `{arn}`: Never used{is_external_str}")
+            else:
+                print(f"  - `{arn}`: {data['n_days']} days ago{is_external_str}")
+            
             print_permissions(data["permissions"], print_reasons, merge_perms)
             
             print(f"    - {colored('Unused permissions', 'magenta')}:")
             for service, perms in data['last_perms'].items():
-                str_srv = f"      - {service}: "
+                str_srv = f"      - `{service}`: "
                 if len(perms) == 1:
                     if perms['n_days'] == -1:
                         str_srv += "Never used."
@@ -437,6 +466,7 @@ def check_policy(all_perm, arn, api_key, verbose, only_yaml, only_openai):
         "known_privesc_perms": all_privesc_perms,
         "known_sensitive_perms": all_sensitive_perms,
         "known_privesc_perms_reasons": all_privesc_perms_reasons if all_privesc_perms_reasons else all_sensitive_perms_reasons,
+        "known_sensitive_perms_reasons": all_sensitive_perms_reasons if all_sensitive_perms_reasons else all_privesc_perms_reasons,
 
         "ai_privesc_perms": all_privesc_perms_ai,
         "ai_sensitive_perms": all_sensitive_perms_ai,
@@ -624,8 +654,31 @@ def get_external_principals(accessanalyzer, analyzer_arn_exposed):
             "conditions": " AND ".join([f'`{k} == {v}`' for k,v in details["condition"].items()])
         }
 
-def main(profiles, api_key, verbose, only_yaml, only_openai, all_resources, print_reasons, all_actions, merge_perms):
-    global OPENAI_CLIENT, UNUSED_GROUPS, UNUSED_LOGINS, UNUSED_ACC_KEYS, UNUSED_ROLES
+
+def check_role_permissions(role, api_key, verbose, only_yaml, only_openai, all_resources, all_actions, accessanalyzer, analyzer_arn):
+    global SEMAPHORE_THREAD, UNUSED_ROLES
+
+    try:
+        role_perms = get_policies("Role", role["RoleName"], role["Arn"], api_key, verbose, only_yaml, only_openai, all_resources, all_actions)
+        if role_perms and any(v for v in role_perms.values()):
+            SEMAPHORE_THREAD.acquire()  # Acquire semaphore before modifying shared resources
+            try:
+                if UNUSED_ROLES.get(role["Arn"]):
+                    UNUSED_ROLES[role["Arn"]]["permissions"] = role_perms
+                else:
+                    get_unused_pers_of_ppal(accessanalyzer, analyzer_arn, role["Arn"], "role", role_perms)
+            finally:
+                SEMAPHORE_THREAD.release()  # Always release semaphore
+    except Exception as e:
+        print(f"Error processing role {role['RoleName']}: {str(e)}")
+
+
+
+def main(profiles, api_key, verbose, only_yaml, only_openai, all_resources, print_reasons, all_actions, merge_perms, max_perms_to_print):
+    global OPENAI_CLIENT, UNUSED_GROUPS, UNUSED_LOGINS, UNUSED_ACC_KEYS, UNUSED_ROLES, MAX_PERMS_TO_PRINT
+
+    if max_perms_to_print:
+        MAX_PERMS_TO_PRINT = max_perms_to_print
 
     if not api_key:
         api_key = os.getenv("OPENAI_API_KEY")
@@ -718,6 +771,17 @@ def main(profiles, api_key, verbose, only_yaml, only_openai, all_resources, prin
 
             # Check permissions for roles
             roles = iam.list_roles()["Roles"]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                # Create tqdm instance with the total count of tasks to be executed
+                progress_bar = tqdm(total=len(roles), desc=f"Checking role permissions in account {account_id} ({profile})")
+                futures = {executor.submit(check_role_permissions, role, api_key, verbose, only_yaml, only_openai, all_resources, all_actions, accessanalyzer, analyzer_arn): role for role in roles}
+                for future in concurrent.futures.as_completed(futures):
+                    # Update progress bar on each task completion
+                    progress_bar.update(1)
+                progress_bar.close()
+
+            
+            """
             for role in tqdm(roles, desc=f"Checking role permissions in account {account_id} ({profile})"):
                 role_perms = get_policies("Role", role["RoleName"], role["Arn"], api_key, verbose, only_yaml, only_openai, all_resources, all_actions)
                 if role_perms and any(v for v in role_perms.values()):
@@ -725,6 +789,7 @@ def main(profiles, api_key, verbose, only_yaml, only_openai, all_resources, prin
                         UNUSED_ROLES[role["Arn"]]["permissions"] = role_perms
                     else:
                         get_unused_pers_of_ppal(accessanalyzer, analyzer_arn, role["Arn"], "role", role_perms)
+            """
             
             print()
             print_results(account_id, profile, print_reasons, merge_perms)
@@ -755,6 +820,7 @@ if __name__ == "__main__":
     parser.add_argument("--print-reasons", default=False, help="Print the reasons why a permission is considered sensitive or useful for privilege escalation.", action="store_true")
     parser.add_argument("--all-actions", default=False, help="Do not filter permissions inside the readOnly policy", action="store_true")
     parser.add_argument("--merge-perms", default=False, help="Print permissions from yaml and OpenAI merged", action="store_true")
+    parser.add_argument("--max-perms-to-print", type=int, help="Maximum number of permissions to print per row", default=15)
     args = parser.parse_args()
 
-    main(args.profiles, args.api_key, args.verbose, args.only_yaml, args.only_openai, args.all_resources, args.print_reasons, args.all_actions, args.merge_perms)
+    main(args.profiles, args.api_key, args.verbose, args.only_yaml, args.only_openai, args.all_resources, args.print_reasons, args.all_actions, args.merge_perms, int(args.max_perms_to_print))
