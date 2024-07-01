@@ -140,7 +140,7 @@ def print_results(account_id, profile, print_reasons, merge_perms):
     print(f"Interesting permissions in {colored(account_id, 'yellow')} ({colored(profile, 'blue')}): ")
 
     if UNUSED_ROLES:
-        print(f"{colored('Unused roles with sensitive permissions', 'yellow')}:")
+        print(f"{colored('Unused roles with sensitive permissions', 'yellow', attrs=['bold'])}:")
         for arn, data in UNUSED_ROLES.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
             no_sensitive_perms = not data.get("permissions")
@@ -161,7 +161,7 @@ def print_results(account_id, profile, print_reasons, merge_perms):
             print()
 
     if UNUSED_LOGINS:
-        print(f"{colored('Unused user logins with sensitive permissions', 'yellow')}:")
+        print(f"{colored('Unused user logins with sensitive permissions', 'yellow', attrs=['bold'])}:")
         for arn, data in UNUSED_LOGINS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
             no_sensitive_perms = not data.get("permissions")
@@ -182,7 +182,7 @@ def print_results(account_id, profile, print_reasons, merge_perms):
             print()
 
     if UNUSED_ACC_KEYS:
-        print(f"{colored('Unused access keys with sensitive permissions', 'yellow')}:")
+        print(f"{colored('Unused access keys with sensitive permissions', 'yellow', attrs=['bold'])}:")
         for arn, data in UNUSED_ACC_KEYS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
             no_sensitive_perms = not data.get("permissions")
@@ -203,7 +203,7 @@ def print_results(account_id, profile, print_reasons, merge_perms):
             print()
     
     if UNUSED_GROUPS:
-        print(f"{colored('Unused groups with sensitive permissions', 'yellow')}:")
+        print(f"{colored('Unused groups with sensitive permissions', 'yellow', attrs=['bold'])}:")
         for arn, data in UNUSED_GROUPS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
             no_sensitive_perms = not data.get("permissions")
@@ -219,7 +219,7 @@ def print_results(account_id, profile, print_reasons, merge_perms):
             print()
 
     if UNUSED_PERMS:
-        print(f"{colored('Principals with unused sensitive permissions', 'yellow')}:")
+        print(f"{colored('Principals with unused sensitive permissions', 'yellow', attrs=['bold'])}:")
         for arn, data in UNUSED_PERMS.items():
             is_external_str = " and is externally accessible" if EXTERNAL_PPALS.get(arn) else ""
 
@@ -231,7 +231,9 @@ def print_results(account_id, profile, print_reasons, merge_perms):
             print_permissions(data["permissions"], print_reasons, merge_perms)
             
             print(f"    - {colored('Unused permissions', 'magenta')}:")
-            for service, perms in data['last_perms'].items():
+            for service in list(data['last_perms'].keys())[:4]:
+                perms = data['last_perms'][service]
+                
                 str_srv = f"      - `{service}`: "
                 if len(perms) == 1:
                     if perms['n_days'] == -1:
@@ -255,10 +257,17 @@ def print_results(account_id, profile, print_reasons, merge_perms):
                         if i == 3:
                             print(f"        - Other {len(perms)-3} `{service}` permissions not used in too much time...")
                             break
+            
+            if len(list(data['last_perms'].keys())) > 4:
+                oters_svcs_str = ", ".join("`"+s+"`" for s in list(data['last_perms'].keys())[4:])
+                if oters_svcs_str:
+                    print(f"        - It also has sensitive permissions in the services {oters_svcs_str} not used in too much time...")
+            
             print()
+            print() # Here 2 prints to separate the different principals
     
     if EXTERNAL_PPALS:
-        print(f"{colored('Externally accessible principals', 'yellow')}:")
+        print(f"{colored('Externally accessible principals', 'yellow', attrs=['bold'])}:")
         for arn, data in EXTERNAL_PPALS.items():
             conditions_str = f" Conditions: {data['conditions']}" if data['conditions'] else ""
             
